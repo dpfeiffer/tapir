@@ -8,7 +8,7 @@ import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -16,6 +16,8 @@ import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointIn
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+import sttp.tapir.server.DecodeFailureContext
+import play.api.Logger
 
 trait TapirPlayServer {
 
@@ -37,16 +39,18 @@ trait TapirPlayServer {
           input: EndpointInput.Single[_],
           failure: DecodeFailure
       ): Result = {
-        val handling = serverOptions.decodeFailureHandler(req, input, failure)
+        val decodeFailureCtx = DecodeFailureContext(input, failure)
+        val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
         handling match {
           case DecodeFailureHandling.NoMatch =>
-            serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(println(_))
+            serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(Logger("test"))
             Result(header = ResponseHeader(StatusCodes.error.code), body = HttpEntity.NoEntity)
           case DecodeFailureHandling.RespondWithResponse(output, value) =>
-            serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
-              case (msg, Some(t)) => println(s"$msg $t")
-              case (msg, None)    => println(msg)
-            }
+            serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(Logger("test"))
+            // serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
+            //   case (msg, Some(t)) => println(s"$msg $t")
+            //   case (msg, None)    => println(msg)
+            // }
 
             OutputToPlayResponse(ServerDefaults.StatusCodes.error, output, value)
         }
@@ -82,7 +86,8 @@ trait TapirPlayServer {
           val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
           val handlingResult = decodeInputResult match {
             case DecodeInputsResult.Failure(input, failure) =>
-              serverOptions.decodeFailureHandler(x, input, failure) != DecodeFailureHandling.noMatch
+              val decodeFailureCtx = DecodeFailureContext(input, failure)
+              serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
             case DecodeInputsResult.Values(_, _) => true
           }
           handlingResult

@@ -31,7 +31,7 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
   override def route[I, E, O](
       e: Endpoint[I, E, O, Nothing],
       fn: I => Future[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]]
+      decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
       PlayServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))

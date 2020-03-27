@@ -12,7 +12,7 @@ import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
